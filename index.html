@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis Protocol</title>
+
+    <!-- Google Fonts: Tomorrow -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Prevent scrollbars */
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: "Tomorrow", sans-serif; /* Changed font */
+            color: #fff;
+        }
+
+        #game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background-color: #000;
+            font-family: "Tomorrow", sans-serif; /* Ensure iframe inherits */
+        }
+
+        #transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0s linear 0.5s;
+            font-family: "Tomorrow", sans-serif;
+        }
+
+        #transition-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease-in-out, visibility 0s linear 0s;
+        }
+
+        /* Force buttons inside menu.html (via iframe) to shift 50px */
+        iframe#game-frame {
+            font-family: "Tomorrow", sans-serif;
+        }
+
+        /* Inject CSS once iframe loads */
+    </style>
+</head>
+<body>
+    <audio id="bgm" src="BGM.wav" loop></audio>
+    <script>
+    // Persistent BGM logic
+    const bgm = document.getElementById('bgm');
+    let masterVolume = 1;
+    bgm.volume = masterVolume;
+    // Try to play immediately, but if blocked, wait for user gesture
+    bgm.play().catch(() => {
+        // Add a one-time click listener to start playback
+        const resumeBGM = () => {
+            bgm.play().catch(()=>{});
+            window.removeEventListener('click', resumeBGM);
+        };
+        window.addEventListener('click', resumeBGM);
+    });
+
+    // Optional: Listen for volume changes from child frames
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'setMasterVolume') {
+            masterVolume = parseFloat(e.data.value);
+            bgm.volume = masterVolume;
+        }
+    });
+    </script>
+    <!-- This iframe will load different game sections -->
+    <iframe id="game-frame" src="menu.html"></iframe>
+
+    <!-- A simple overlay for transitions -->
+    <div id="transition-overlay">Loading...</div>
+
+    <script>
+        const gameFrame = document.getElementById('game-frame');
+        const transitionOverlay = document.getElementById('transition-overlay');
+
+        // Function to load a new page into the iframe
+        function loadGamePage(url) {
+            console.log("Attempting to load:", url);
+            transitionOverlay.classList.add('active');
+
+            setTimeout(() => {
+                gameFrame.src = url;
+            }, 500);
+
+            gameFrame.onload = () => {
+                console.log("Page loaded:", url);
+                transitionOverlay.classList.remove('active');
+
+                // Apply Tomorrow font + shift buttons inside iframe
+                try {
+                    const iframeDoc = gameFrame.contentDocument || gameFrame.contentWindow.document;
+                    const style = iframeDoc.createElement("style");
+                    style.textContent = `
+                        body, button {
+                            font-family: "Tomorrow", sans-serif !important;
+                        }
+                        #menu-container button:nth-child(1),
+                        #menu-container button:nth-child(2) {
+                            margin-left: 50px !important;
+                        }
+                    `;
+                    iframeDoc.head.appendChild(style);
+                } catch (e) {
+                    console.warn("Could not inject styles into iframe:", e);
+                }
+            };
+        }
+
+        // --- Event Listeners and Game Logic Flow ---
+        window.addEventListener('message', (event) => {
+            if (event.origin !== window.location.origin) {
+                console.warn("Message from untrusted origin:", event.origin);
+                return;
+            }
+
+            const message = event.data;
+            console.log("Received message from iframe:", message);
+
+            switch (message.type) {
+                case 'newGame':
+                    // Show thorn.js transition before loading day1.html
+                    showThornTransition(() => {
+                        loadGamePage('day1.html');
+                    });
+                    break;
+                case 'endDay1':
+                    loadGamePage('day2.html');
+                    break;
+                case 'endDay2':
+                    loadGamePage('day3.html');
+                    break;
+                case 'day3Choice':
+                    if (message.choice === 'dragKey') {
+                        loadGamePage('he.html');
+                    } else if (message.choice === 'doNothing') {
+                        loadGamePage('be.html');
+                    } else if (message.choice === 'muteVoice') {
+                        loadGamePage('oe.html');
+                    }
+                    break;
+                default:
+                    console.warn("Unhandled message type:", message.type);
+            }
+
+            // Helper: Show thorn.js transition overlay
+            function showThornTransition(callback) {
+                // Create overlay
+                let thornOverlay = document.createElement('div');
+                thornOverlay.id = 'thorn-transition-overlay';
+                thornOverlay.style.position = 'fixed';
+                thornOverlay.style.top = '0';
+                thornOverlay.style.left = '0';
+                thornOverlay.style.width = '100vw';
+                thornOverlay.style.height = '100vh';
+                thornOverlay.style.zIndex = '2000';
+                thornOverlay.style.background = 'rgba(0,0,0,0.95)';
+                document.body.appendChild(thornOverlay);
+
+                // Load and run thorn.js
+                let script = document.createElement('script');
+                script.src = 'thorn.js';
+                script.onload = function() {
+                    // If thorn.js exposes a startThornTransition function, call it
+                    if (typeof window.startThornTransition === 'function') {
+                        window.startThornTransition(thornOverlay, () => {
+                            // Remove overlay and continue
+                            document.body.removeChild(thornOverlay);
+                            callback();
+                        });
+                    } else {
+                        // Fallback: show overlay for 2s then continue
+                        setTimeout(() => {
+                            document.body.removeChild(thornOverlay);
+                            callback();
+                        }, 2000);
+                    }
+                };
+                document.body.appendChild(script);
+            }
+        });
+    </script>
+</body>
+</html>

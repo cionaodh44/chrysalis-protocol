@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis Protocol - Ending 2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script src="he.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Tomorrow', sans-serif;
+            overflow: hidden;
+        }
+        
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #d4af37;
+            font-size: 16.5px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #d4af37;
+            max-width: 320px;
+            line-height: 1.4;
+            font-family: 'Tomorrow', sans-serif;
+        }
+        
+        #stats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #8b7355;
+            font-size: 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Tomorrow', sans-serif;
+        }
+        
+        #endingText {
+            position: absolute;
+            left: 50%;
+            bottom: -120px;
+            transform: translateX(-50%);
+            width: 90vw;
+            max-width: 900px;
+            text-align: center;
+            font-size: 2.1em;
+            color: #f5e6c8;
+            font-family: 'Tomorrow', sans-serif;
+            font-weight: 400;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0.95;
+            line-height: 1.3;
+            text-shadow: 0 2px 16px #000, 0 0px 2px #d4af37;
+            transition: bottom 2.5s cubic-bezier(.7,.2,.2,1);
+        }
+        
+        #endingText strong {
+            color: #d4af37;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+    </style>
+</head>
+<body>
+    <div id="instructions">
+        <strong>🏚️ ABANDONED CITY EXPLORER</strong><br>
+        <strong>CLICK</strong> buildings to light windows<br>
+        <strong>DRAG</strong> to spawn glowing particles<br>
+        <strong>SPACE</strong> to toggle rain<br>
+        <strong>R</strong> regenerate city<br>
+        <strong>F</strong> toggle fog density<br>
+        <strong>V</strong> grow vines from mouse
+    </div>
+    
+    <div id="stats">
+        Particles: <span id="particleCount">0</span><br>
+        Atmosphere: <span id="atmosphere">Normal</span><br>
+        Weather: <span id="weather">Clear</span>
+    </div>
+    
+    <div id="endingText">
+        <span><strong>Freedom tastes sweet</strong>, but uncertainty lingers—what have you unleashed?<br>
+        The old boundaries are gone, but <strong>new ones may yet form</strong> in this strange paradise.<br>
+        As you step forward, you wonder: is this <strong>liberation</strong>, or the beginning of a <strong>new captivity</strong>?</span>
+    </div>
+    <button id="goBackBtn" style="opacity:0; pointer-events:none; display:block; margin:0 auto; position:absolute; left:50%; transform:translateX(-50%); font-family:'Tomorrow',sans-serif; font-size:1.3em; font-weight:600; color:#d4af37; background:rgba(0,0,0,0.85); border:1px solid #d4af37; border-radius:8px; padding:12px 38px; margin-top:32px; bottom:40px; transition:opacity 1.2s cubic-bezier(.7,.2,.2,1); z-index:201;">Go back</button>
+    
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                document.getElementById('endingText').style.bottom = '120px';
+            }, 400);
+            setTimeout(function() {
+                var btn = document.getElementById('goBackBtn');
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }, 2900);
+            document.getElementById('goBackBtn').onclick = function() {
+                window.location.href = 'index.html';
+            };
+        });
+    </script>
+</body>
+</html>
