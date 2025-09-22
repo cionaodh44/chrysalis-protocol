@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis Protocol</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            position: relative;
+            font-family: 'Tomorrow', sans-serif;
+            background: #000;
+        }
+
+        .main-container { width: 100%; height: 100%; position: relative; }
+
+        .menu-background {
+            position: absolute; top: -10px; left: -10px;
+            width: calc(100% + 20px); height: calc(100% + 20px);
+            background-image: url('menu.png'); background-size: cover;
+            background-position: center; background-repeat: no-repeat;
+            z-index: 1; animation: subtleShake 15s infinite ease-in-out;
+        }
+
+        @keyframes subtleShake {
+            0%, 100% { transform: translate(0, 0) scale(1.01); }
+            25% { transform: translate(-2px, 1px) scale(1.01); }
+            50% { transform: translate(1px, -1px) scale(1.01); }
+            75% { transform: translate(-1px, -2px) scale(1.01); }
+        }
+
+        .flicker-overlay, .static-overlay, .vignette, .logo, .menu-options, .credit-panel, .continue-panel {
+            position: absolute;
+        }
+
+        .flicker-overlay {
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0); z-index: 2;
+            animation: horrorFlicker 6s infinite;
+        }
+
+        @keyframes horrorFlicker {
+            0%,82%,84%,86%,89%,100% { background: rgba(0,0,0,0); }
+            83% { background: rgba(0,0,0,0.8); }
+            85% { background: rgba(0,0,0,0.9); }
+            87% { background: rgba(0,0,0,0.7); }
+        }
+
+        .static-overlay {
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSIgeD0iMCIgeT0iMCIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSI+PGZlVHVyYnVsZW5jZSBiYXNlRnJlcXVlbmN5PSIwLjkiIG51bU9jdGF2ZXM9IjQiIHJlc3VsdD0ibm9pc2UiLz48ZmVDb2xvck1hdHJpeCBpbj0ibm9pc2UiIHR5cGU9InNhdHVyYXRlIiB2YWx1ZXM9IjAiLz48ZmVDb21wb3NpdGUgaW49Im5vaXNlIiBpbjI9IlNvdXJjZUdyYXBoaWMiIG9wZXJhdG9yPSJtdWx0aXBseSIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuMDMiLz48L3N2Zz4=');
+            z-index: 2; opacity: 0.4; animation: staticMove 0.2s infinite linear;
+        }
+
+        @keyframes staticMove {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(1px, -1px); }
+            60% { transform: translate(-1px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .vignette {
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.7) 80%);
+            z-index: 3;
+        }
+
+        .logo {
+            top: 0; left: 0; width: 1920px; height: 1080px; z-index: 4;
+        }
+
+        .logo img {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: drop-shadow(0 0 20px rgba(255,255,255,0.3));
+            animation: logoGlitch 8s infinite;
+        }
+
+        @keyframes logoGlitch {
+            0%,98% { transform: translate(0,0); filter: drop-shadow(0 0 20px rgba(255,255,255,0.3)); }
+            98.5% { transform: translate(-3px,1px); filter: drop-shadow(0 0 20px rgba(255,0,0,0.5)); }
+            99% { transform: translate(2px,-2px); filter: drop-shadow(0 0 20px rgba(0,255,0,0.5)); }
+            99.5% { transform: translate(-1px,2px); filter: drop-shadow(0 0 20px rgba(0,0,255,0.5)); }
+        }
+
+        .menu-options {
+            left: 350px; bottom: 200px; z-index: 5;
+            display: flex; flex-direction: column; gap: 30px;
+        }
+
+        .menu-option {
+            background: linear-gradient(135deg, rgba(0,0,0,0.8), rgba(20,20,20,0.9));
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff; padding: 20px 40px; font-size: 24px; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease;
+            text-transform: uppercase; letter-spacing: 2px;
+            min-width: 250px; text-align: center; border-radius: 5px;
+            position: relative; overflow: hidden;
+        }
+        .menu-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        .menu-option:hover::before {
+            left: 100%;
+        }
+        .menu-option:hover {
+            background: linear-gradient(135deg, rgba(50,0,0,0.9), rgba(80,20,20,0.9));
+            border-color: rgba(255,100,100,0.8);
+            transform: translateX(10px);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+        .menu-option:active { transform: translateX(5px) scale(0.98); }
+
+        /* Continue panel */
+        .continue-panel {
+            top: 0; left: 0; width: 1920px; height: 1080px; z-index: 20;
+            background: url('continue.png') no-repeat center/cover;
+            display: none; /* Hidden by default */
+        }
+
+        .continue-panel.show { display: block; }
+
+        .transparent-button {
+            position: absolute;
+            background: rgba(0,0,0,0); /* Fully transparent background */
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* Credits */
+        .credit-panel {
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0,0,0,0.95), rgba(20,0,0,0.95));
+            border: 3px solid rgba(255,255,255,0.5);
+            border-radius: 10px; padding: 50px;
+            color: #fff; font-size: 18px; line-height: 1.6; max-width: 600px;
+            z-index: 10; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 100px rgba(255, 0, 0, 0.2);
+        }
+
+        .credit-panel.show {
+            opacity: 1; visibility: visible;
+            animation: panelGlow 2s infinite alternate;
+        }
+
+        @keyframes panelGlow {
+            from { box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 100px rgba(255, 0, 0, 0.2); }
+            to { box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 100px rgba(255, 0, 0, 0.4); }
+        }
+
+        .credit-panel h2 {
+            text-align: center; margin-bottom: 30px;
+            font-size: 28px; color: #fff; text-transform: uppercase; letter-spacing: 3px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3); padding-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .credit-section { margin-bottom: 25px; }
+        .credit-section strong {
+            color: #fff; display: block; margin-bottom: 8px; font-size: 20px;
+        }
+
+        .close-credit {
+            position: absolute; top: 15px; right: 20px;
+            background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .close-credit:hover { color: #ff6b6b; text-shadow: 0 0 10px #ff6b6b; transform: scale(1.2); }
+
+        .credit-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 9;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .credit-overlay.show { opacity: 1; visibility: visible; }
+
+        /* Responsive scaling */
+        @media (max-width: 1920px) {
+            body { transform-origin: top left; transform: scale(calc(100vw / 1920)); }
+        }
+
+        /* Random glitch effect */
+        .glitch-trigger { animation: randomGlitch 12s infinite; }
+        @keyframes randomGlitch {
+            0%, 95% { filter: none; }
+            95.5% { filter: hue-rotate(90deg) saturate(2); }
+            96% { filter: hue-rotate(180deg) contrast(2); }
+            96.5% { filter: hue-rotate(270deg) invert(0.1); }
+            97% { filter: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container glitch-trigger">
+        <div class="menu-background"></div>
+        <div class="static-overlay"></div>
+        <div class="flicker-overlay"></div>
+        <div class="vignette"></div>
+
+        <div class="logo"><img src="logo.png" alt="Game Logo"></div>
+
+        <div class="menu-options">
+            <div class="menu-option" onclick="startNewGame()">New Game</div>
+            <div class="menu-option" onclick="showContinue()">Continue</div>
+            <div class="menu-option" onclick="showCredits()">Credits</div>
+        </div>
+
+        <!-- Continue Panel -->
+        <div class="continue-panel" id="continuePanel">
+            <button class="transparent-button" style="width:500.84px; height:582.94px; left:455.49px; top:122.69px; transform: rotate(-14deg); transform-origin: top left;" onclick="window.location.href='day1.html'"></button>
+            <button class="transparent-button" style="width:500.84px; height:582.94px; left:209.11px; top:380.96px; transform: rotate(14deg); transform-origin: top left;" onclick="window.location.href='day2.html'"></button>
+            <button class="transparent-button" style="width:709.74px; height:749.69px; left:1158.84px; top:145px; transform: rotate(13deg); transform-origin: top left;" onclick="window.location.href='day3.html'"></button>
+            <button class="transparent-button" style="width:223px; height:232px; left:1648px; top:29px;" onclick="hideContinue()"></button>
+        </div>
+
+        <!-- Credits -->
+        <div class="credit-overlay" onclick="hideCredits()"></div>
+        <div class="credit-panel">
+            <button class="close-credit" onclick="hideCredits()">×</button>
+            <h2>Credits</h2>
+            <div class="credit-section"><strong>Art and Code:</strong> Ciona</div>
+            <div class="credit-section"><strong>Special Thanks:</strong> Soda for helping with dialogue</div>
+            <div class="credit-section"><strong>Concept:</strong> An experimental, narrative-focused artwork where the player’s choices shape the growth of an emerging being. The experience asks the player to question ideas of control, empathy, and what it means to be human. At its core, the piece uses the metaphor of “planting a seed”—of life, of consciousness—and examines how its fate changes</div>
+        </div>
+    </div>
+
+    <script>
+        function startNewGame() {
+            // This assumes index.html is the parent and handles navigation
+            window.parent.postMessage({ type: 'newGame' }, window.location.origin);
+        }
+
+        function showCredits() {
+            document.querySelector('.credit-panel').classList.add('show');
+            document.querySelector('.credit-overlay').classList.add('show');
+        }
+        function hideCredits() {
+            document.querySelector('.credit-panel').classList.remove('show');
+            document.querySelector('.credit-overlay').classList.remove('show');
+        }
+
+        function showContinue() {
+            document.getElementById('continuePanel').classList.add('show');
+        }
+        function hideContinue() {
+            document.getElementById('continuePanel').classList.remove('show');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                hideCredits();
+                hideContinue();
+            }
+        });
+    </script>
+</body>
+</html>
