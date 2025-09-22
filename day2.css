@@ -1,0 +1,430 @@
+@font-face {
+    font-family: 'PixelOperatorHB';
+    src: url('PixelOperatorHB.ttf') format('truetype');
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
+    font-family: "Tomorrow", sans-serif; /* Changed to Tomorrow font */
+    color: white;
+    width: 1920px; /* Fixed width as per request */
+    height: 1080px; /* Fixed height as per request */
+    position: relative;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden; /* Ensure content doesn't spill */
+}
+
+#intro-screen {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: black;
+    display: none; /* Hide intro screen for Day 2 */
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    cursor: pointer;
+    z-index: 100;
+}
+
+#intro-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute; /* Allows overlay to be on top */
+    top: 0;
+    left: 0;
+}
+
+#intro-text-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0); /* Starts transparent */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 1s ease-in-out;
+}
+
+#intro-text {
+    font-size: 36px;
+    text-align: center;
+    white-space: pre-wrap;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    max-width: 80%;
+    line-height: 1.5;
+    z-index: 1; /* Ensure text is above overlay */
+}
+
+#game-play-area {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: none; /* Hidden until intro finishes */
+    overflow: hidden;
+}
+
+#background-img {
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    object-fit: cover;
+    transition: opacity 1s ease-in-out;
+    z-index: 0; /* Background layer */
+    transform: translate(0,0); /* For parallax */
+}
+
+#char-sprite {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
+    max-height: 100%; /* Adjust as needed */
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.1s ease-out, opacity 1s ease-in-out; /* For parallax smoothness and fade */
+    z-index: 2; /* Above background */
+    pointer-events: none; /* Don't block clicks */
+}
+
+#ux-ui-img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 3; /* Above sprites, below text and controls */
+    pointer-events: none; /* Allows interaction with elements below it */
+}
+
+/* New rule to hide ux-ui-img when controls are hidden */
+#game-play-area.controls-hidden #ux-ui-img {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out; /* Smooth transition */
+}
+
+
+#text-box {
+    position: absolute;
+    bottom: 20px; /* Adjusted 20px higher */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1804px; /* Specified width */
+    height: 163px; /* Specified height */
+    background: transparent; /* No box */
+    display: flex;
+    align-items: center;
+    padding: 0 50px; /* Padding for text inside */
+    box-sizing: border-box;
+    z-index: 5;
+    pointer-events: auto; /* Allow clicks */
+    transition: opacity 0.3s ease-in-out;
+}
+
+#name-box {
+    position: absolute;
+    bottom: 160px; /* Adjusted 20px higher (original 140 + 20) */
+    left: calc(50% - (1804px / 2) + 50px); /* Align with left edge of text content area */
+    transform: translateX(0); /* No horizontal centering, fixed left offset */
+    width: 412px; /* Specified width */
+    height: 81px; /* Specified height */
+    background: transparent; /* No box */
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 20px; /* Padding for name text */
+    box-sizing: border-box;
+    font-size: 32px;
+    color: white;
+    z-index: 6;
+    pointer-events: auto; /* Allow clicks */
+    transition: opacity 0.3s ease-in-out;
+}
+
+#speaker-name {
+    padding-bottom: 10px; /* Adjust for vertical alignment */
+}
+
+
+#dialogue-text {
+    flex-grow: 1;
+    font-size: 32px;
+    color: white;
+    line-height: 1.4;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#choices-container {
+    position: absolute;
+    bottom: 290px; /* Adjusted 20px higher */
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 7;
+    pointer-events: auto; /* Allow clicks */
+    transition: opacity 0.3s ease-in-out;
+}
+
+.choice-button {
+    width: 600px; /* Adjust width as needed */
+    height: 80px; /* Adjust height as needed */
+    background-color: rgba(50, 50, 50, 0.8); /* Dark background */
+    border: 3px solid white;
+    color: white;
+    font-family: "Tomorrow", sans-serif; /* Changed to Tomorrow font */
+    font-size: 28px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.choice-button:hover {
+    background-color: rgba(80, 80, 80, 0.9);
+    filter: brightness(1.2);
+}
+
+#controls-bar {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 8;
+    transition: opacity 0.3s ease-in-out;
+    pointer-events: auto; /* Allow clicks */
+}
+
+
+/* NEW: Hide control buttons when controls-hidden class is active */
+#game-play-area.controls-hidden .control-button {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#report-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 11;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+#report-box {
+    background-color: rgba(0, 0, 0, 0.95);
+    border: 2px solid white;
+    padding: 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#report-box button {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 2px solid white;
+    color: white;
+    font-family: "Tomorrow", sans-serif; /* Changed to Tomorrow font */
+    font-size: 24px;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin: 0 10px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+#report-box button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#day-transition-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out, background-color 1s ease-in-out;
+}
+#day-transition-text {
+    font-size: 72px; /* Default for simple text like report */
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    text-align: center;
+    max-width: 80%;
+    line-height: 1.5;
+}
+/* Specific animation for Day X text */
+.fade-in-out-day {
+    animation: fadeInOutDay 3s forwards;
+}
+@keyframes fadeInOutDay {
+    0% { opacity: 0; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1.1); }
+    70% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(1.2); }
+}
+/* General fade animations */
+.fade-in {
+    animation: fadeIn 1s forwards;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.fade-out {
+    animation: fadeOut 1s forwards;
+}
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+.shake {
+    animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    transform: translate3d(0, 0, 0); /* Base for translate */
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0) translateX(-50%); }
+    20%, 80% { transform: translate3d(2px, 0, 0) translateX(-50%); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0) translateX(-50%); }
+    40%, 60% { transform: translate3d(4px, 0, 0) translateX(-50%); }
+}
+.zoom-in {
+    animation: zoomIn 0.5s forwards;
+}
+@keyframes zoomIn {
+    from { transform: scale(1) translateX(-50%); }
+    to { transform: scale(1.05) translateX(-50%); }
+}
+.zoom-out {
+    animation: zoomOut 0.5s forwards;
+}
+@keyframes zoomOut {
+    from { transform: scale(1.05) translateX(-50%); }
+    to { transform: scale(1) translateX(-50%); }
+}
+
+#settings-button {
+    position: absolute;
+    width: 158px;
+    height: 182px;
+    left: 1738px;
+    top: 21px;
+    background-color: transparent; 
+    cursor: pointer;
+    z-index: 10; 
+}
+#settings-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 12; /* Above report overlay */
+    display: none; /* Hidden by default */
+    justify-content: center;
+    align-items: center;
+}
+#settings-panel {
+    background-color: rgba(0, 0, 0, 0.95);
+    border: 2px solid white;
+    padding: 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    min-width: 400px;
+}
+#settings-panel h2 {
+    margin-top: 0;
+    font-size: 36px;
+    color: white;
+}
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    font-size: 28px;
+}
+.setting-item input[type="range"] {
+    width: 200px;
+    height: 10px;
+    -webkit-appearance: none;
+    background: #ff0000; /* Changed to red */
+    outline: none;
+    opacity: 0.9;
+    transition: opacity .2s;
+    border-radius: 5px;
+}
+.setting-item input[type="range"]:hover {
+    opacity: 1;
+}
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ff0000; /* Changed to red */
+    cursor: pointer;
+}
+.setting-item input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ff0000; /* Changed to red */
+    cursor: pointer;
+}
+#settings-panel button {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 2px solid white;
+    color: white;
+    font-family: "Tomorrow", sans-serif; /* Changed to Tomorrow font */
+    font-size: 24px;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-top: 20px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    transition: background-color 0.2s;
+}
+#settings-panel button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}

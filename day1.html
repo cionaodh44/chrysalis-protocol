@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis Protocol</title>
+
+    <!-- Google Fonts: Tomorrow -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="day1.css">
+</head>
+<body>
+    <audio id="type-sound" src="type.wav"></audio>
+    <audio id="choice-sound" src="choice.wav"></audio>
+    <audio id="writing-sound" src="writting.wav"></audio>
+    <audio id="master-volume-test-sound" src="master_volume_test.wav"></audio>
+    <!-- BGM is now handled by index.html for continuous playback -->
+
+    <div id="game-container">
+        <!-- Intro Screen -->
+        <div id="intro-screen">
+            <img id="intro-image" src="intro.png" alt="Intro Background">
+            <div id="intro-text-overlay">
+                <div id="intro-text"></div>
+            </div>
+        </div>
+
+        <!-- Main Game UI -->
+        <div id="game-play-area">
+            <img id="background-img" src="" alt="Background">
+            <img id="char-sprite" src="" alt="Character Sprite">
+            <img id="ux-ui-img" src="ux_ui.png" alt="UI Overlay">
+
+            <div id="name-box">
+                <span id="speaker-name"></span>
+            </div>
+
+            <div id="text-box">
+                <div id="dialogue-text"></div>
+            </div>
+
+            <div id="choices-container"></div>
+
+            <div id="controls-bar">
+                <button id="report-button" class="control-button"></button>
+                <button id="hide-controls-button" class="control-button"></button>
+            </div>
+
+            <!-- New: Settings Button -->
+            <div id="settings-button" onclick="toggleSettings()"></div>
+        </div>
+
+        <!-- Report Overlay -->
+        <div id="report-overlay">
+            <div id="report-box">
+                <h2>Do you want to end the shift?</h2>
+                <div>
+                    <button onclick="endShift('yes')">Yes</button>
+                    <button onclick="endShift('no')">No</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day Transition Overlay -->
+        <div id="day-transition-overlay">
+            <div id="day-transition-text"></div>
+        </div>
+
+        <!-- New: Settings Overlay -->
+        <div id="settings-overlay">
+            <div id="settings-panel">
+                <h2>Settings</h2>
+                <div class="setting-item">
+                    <span>Master Volume:</span>
+                    <input type="range" id="master-volume-slider" min="0" max="1" step="0.01" value="1" oninput="updateMasterVolume(this.value)">
+                </div>
+                <div class="setting-item">
+                    <span>Character Voice:</span>
+                    <input type="range" id="char-voice-slider" min="0" max="1" step="0.01" value="1" oninput="updateCharVoiceVolume(this.value)">
+                </div>
+                <button onclick="toggleSettings()">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const introScreen = document.getElementById('intro-screen');
+        const introTextOverlay = document.getElementById('intro-text-overlay');
+        const introTextDiv = document.getElementById('intro-text');
+        const gamePlayArea = document.getElementById('game-play-area');
+        const backgroundImg = document.getElementById('background-img');
+        const charSprite = document.getElementById('char-sprite');
+        const uxUiImg = document.getElementById('ux-ui-img'); // New UI image element
+        const textBox = document.getElementById('text-box');
+        const nameBox = document.getElementById('name-box');
+        const speakerName = document.getElementById('speaker-name');
+        const dialogueTextDiv = document.getElementById('dialogue-text');
+        const choicesContainer = document.getElementById('choices-container');
+        const controlsBar = document.getElementById('controls-bar');
+        const reportOverlay = document.getElementById('report-overlay');
+        const dayTransitionOverlay = document.getElementById('day-transition-overlay');
+        const dayTransitionText = document.getElementById('day-transition-text');
+        const settingsOverlay = document.getElementById('settings-overlay'); // New
+        const masterVolumeSlider = document.getElementById('master-volume-slider'); // New
+        const charVoiceSlider = document.getElementById('char-voice-slider'); // New
+
+    const typeSound = document.getElementById('type-sound');
+    const choiceSound = document.getElementById('choice-sound');
+    const writingSound = document.getElementById('writing-sound'); // Corrected ID from 'writting.wav'
+    const masterVolumeTestSound = document.getElementById('master-volume-test-sound'); // New
+    const bgm = document.getElementById('bgm');
+
+        let currentSceneIndex = 0;
+        let currentTypingInterval;
+        let isTyping = false;
+        let currentDay = 1;
+        let controlsHidden = false;
+        let currentSprite = ''; // To keep track of the last displayed sprite
+        let masterVolume = 1; // New: Master volume control
+        let charVoiceVolume = 1; // New: Character voice volume control
+
+        const scenes = [
+            {
+                type: 'intro',
+                text: "[Employment Notice – Assignment #047]\nApplicant [ID: █████],\nYou have been selected for the Observation Contract Program under the Department of Containment.\nDetails:\nTerm: 3 days\nWelcome aboard.\n— Dr. ███████\nContainment & Behavioral Studies",
+                next: 'day_transition',
+                day: 1
+            },
+            {
+                type: 'dialogue',
+                background: 'background.png',
+                speaker: 'MC',
+                text: '“Ugh… my head... where… am I? What happened…?”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc.png',
+                effect: 'shake',
+                text: '“You’re awake. Good. That means the serum worked without complications.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_talk.png',
+                text: '“Relax. You applied for a job, remember? Consider this… the first step of your employment.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_talk.png',
+                text: '“Your task is simple: Take care of it. Three days. That’s all. Feed it even though it does not need that much or observe it, and report its condition to me. Do it properly, and you will be paid handsomely.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“…‘It’? You mean that thing in there?”',
+                hideNameBox: true,
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day1_normal.png', // This should appear over background.png
+                text: '“Ghhhhh—kkhhhhh…”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_talk.png',
+                text: '“You’re here to observe. Nothing more. If you feel sympathy, remember: sympathy is how it survives.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_talk.png',
+                text: '“Decide wisely. Three days. Just do your job. Nothing else.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Thought',
+                text: '‘Just three days… I can handle this. I have to!’',
+                hideNameBox: true,
+                keepSprite: true
+            },
+            {
+                type: 'choice',
+                choices: [
+                    { text: 'Feed the creature.', nextSceneIndex: 11 }
+                ],
+                sprite: 'day1_normal.png' // This sprite should be visible during the choice
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“…God, I can’t believe I’m doing this. Just three days… just three days and I’m free.”',
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“…Don’t come too close… damn it…”',
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“There. Take it. Just… eat and leave me alone.”',
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Thought',
+                text: '‘The creature crouches, sniffing the paste-like food. Then, with jerky movements, it begins eating noisily.’',
+                hideNameBox: true,
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“Don’t look at me like that… I’m not your friend.”',
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                sound: 'writing.wav', // Corrected sound file name
+                text: '“Day one down… Only two more to go. Just feed it… or take time to write a damn report. Easy. Right?”',
+                keepSprite: true
+            },
+            {
+                type: 'observation_report',
+                day: 1,
+                text: '[Day one observation: Manual shift end. Subject appears normal.]',
+                next: 'day_transition',
+                day_target: 2
+            }
+        ];
+
+        function playSound(soundElement) {
+            if (soundElement) {
+                soundElement.volume = masterVolume; // Apply master volume
+                soundElement.currentTime = 0;
+                soundElement.play().catch(e => console.error("Error playing sound:", e));
+            }
+        }
+
+        function typeText(text, onComplete) {
+            isTyping = true;
+            let charIndex = 0;
+            dialogueTextDiv.innerHTML = '';
+            clearTimeout(currentTypingInterval);
+
+            function typeChar() {
+                if (charIndex < text.length) {
+                    dialogueTextDiv.innerHTML += text.charAt(charIndex);
+                    charIndex++;
+                    playSound(typeSound);
+                    currentTypingInterval = setTimeout(typeChar, 50);
+                } else {
+                    isTyping = false;
+                    if (onComplete) onComplete();
+                }
+            }
+            typeChar();
+        }
+
+        function showFullText(text) {
+            clearTimeout(currentTypingInterval);
+            dialogueTextDiv.innerHTML = text;
+            isTyping = false;
+        }
+
+        function displayScene(scene) {
+            choicesContainer.innerHTML = '';
+            dialogueTextDiv.innerHTML = '';
+            nameBox.style.display = 'flex';
+
+            if (scene.background) {
+                backgroundImg.src = scene.background;
+                backgroundImg.style.opacity = 1;
+                uxUiImg.style.display = 'block'; // Show UI image with background
+            } else if (currentSceneIndex === 1) { // Assuming first non-intro scene has background
+                backgroundImg.style.opacity = 0;
+                uxUiImg.style.display = 'none'; // Hide UI image if no background
+            }
+
+            if (scene.sprite) {
+                charSprite.src = scene.sprite;
+                charSprite.style.display = 'block';
+                currentSprite = scene.sprite;
+            } else if (!scene.keepSprite) {
+                charSprite.src = '';
+                charSprite.style.display = 'none';
+                currentSprite = '';
+            } else if (scene.keepSprite && currentSprite) {
+                charSprite.src = currentSprite;
+                charSprite.style.display = 'block';
+            }
+
+            charSprite.classList.remove('shake', 'zoom-in', 'zoom-out');
+            if (scene.effect === 'shake') {
+                charSprite.classList.add('shake');
+            } else if (scene.effect === 'zoom-in') {
+                charSprite.classList.add('zoom-in');
+            } else if (scene.effect === 'zoom-out') {
+                charSprite.classList.add('zoom-out');
+            }
+
+            if (scene.speaker) {
+                speakerName.textContent = scene.speaker;
+                nameBox.style.opacity = 1;
+                if (scene.hideNameBox) {
+                    nameBox.style.opacity = 0;
+                }
+            } else {
+                speakerName.textContent = '';
+                nameBox.style.opacity = 0;
+            }
+
+            if (scene.sound === 'writing.wav') playSound(writingSound); // Corrected sound file name
+
+            if (scene.type === 'dialogue') {
+                typeText(scene.text);
+            } else if (scene.type === 'choice') {
+                speakerName.textContent = '';
+                nameBox.style.opacity = 0;
+
+                if (scene.sprite) {
+                    charSprite.src = scene.sprite;
+                    charSprite.style.display = 'block';
+                    currentSprite = scene.sprite;
+                } else if (!currentSprite) {
+                    charSprite.style.display = 'none';
+                }
+
+                scene.choices.forEach((choice) => {
+                    const button = document.createElement('button');
+                    button.classList.add('choice-button');
+                    button.textContent = choice.text;
+                    button.onclick = () => handleChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+            }
+        }
+
+        function handleChoice(choice) {
+            playSound(choiceSound);
+            currentSceneIndex = choice.nextSceneIndex;
+            loadScene();
+        }
+
+        function nextDialogue() {
+            if (isTyping) {
+                showFullText(scenes[currentSceneIndex].text);
+                return;
+            }
+
+            currentSceneIndex++;
+            if (currentSceneIndex < scenes.length) {
+                loadScene();
+            } else {
+                console.log("End of game content for now.");
+                // This is the end of Day 1's script content.
+                // We should now signal the index.html to load Day 2.
+                // It's important that this happens *after* any 'observation_report' or final dialogue.
+                if (!reportOverlay.style.display === 'flex' && scenes[currentSceneIndex - 1].type !== 'observation_report') {
+                     // Only signal if not already showing report or about to show it
+                    endShift('yes'); // Assume automatic shift end if narrative finishes
+                }
+            }
+        }
+
+        function loadScene() {
+            const scene = scenes[currentSceneIndex];
+
+            if (!scene) {
+                console.log("No more scenes.");
+                return;
+            }
+
+            switch (scene.type) {
+                case 'intro':
+                    break;
+                case 'dialogue':
+                case 'choice':
+                    displayScene(scene);
+                    break;
+                case 'observation_report':
+                    showObservationReport(scene);
+                    break;
+                case 'day_transition':
+                    break;
+                default:
+                    console.error("Unknown scene type:", scene.type);
+            }
+        }
+
+        async function initIntro() {
+            introScreen.style.display = 'block';
+            gamePlayArea.style.display = 'none';
+            dayTransitionOverlay.style.display = 'none';
+            settingsOverlay.style.display = 'none'; // Ensure settings are hidden
+
+            await new Promise(resolve => introScreen.onclick = resolve);
+
+            introScreen.onclick = null;
+            introTextOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            introTextDiv.style.opacity = 1;
+
+            const fullText = scenes[0].text;
+            let charIndex = 0;
+            introTextDiv.innerHTML = '';
+            let introTypingInterval = setInterval(() => {
+                if (charIndex < fullText.length) {
+                    introTextDiv.innerHTML += fullText.charAt(charIndex);
+                    charIndex++;
+                    playSound(typeSound);
+                } else {
+                    clearInterval(introTypingInterval);
+                    introScreen.onclick = () => startDayTransition(scenes[0].day);
+                }
+            }, 50);
+
+            introScreen.addEventListener('click', function skipTyping(e) {
+                if (charIndex < fullText.length) {
+                    clearInterval(introTypingInterval);
+                    introTextDiv.innerHTML = fullText;
+                    introScreen.removeEventListener('click', skipTyping);
+                    introScreen.onclick = () => startDayTransition(scenes[0].day);
+                }
+            }, { once: true });
+        }
+
+        function startDayTransition(dayNum) {
+            introScreen.style.display = 'none';
+            gamePlayArea.style.display = 'none';
+            dayTransitionOverlay.style.display = 'flex';
+            dayTransitionOverlay.style.backgroundColor = 'black';
+            dayTransitionOverlay.style.opacity = 1;
+
+            dayTransitionText.textContent = `Day ${dayNum}`;
+            dayTransitionText.style.fontSize = '120px';
+            dayTransitionText.classList.remove('fade-out');
+            dayTransitionText.classList.add('fade-in-out-day');
+
+            setTimeout(() => {
+                dayTransitionText.classList.remove('fade-in-out-day');
+                dayTransitionOverlay.style.opacity = 0;
+                dayTransitionOverlay.style.display = 'none';
+                startGame();
+            }, 3000);
+        }
+
+        function startGame() {
+            gamePlayArea.style.display = 'block';
+            currentSceneIndex = 1;
+            loadScene();
+        }
+
+        function showObservationReport(scene) {
+            gamePlayArea.style.filter = 'brightness(0.5)';
+            textBox.style.transition = 'opacity 0.5s ease-in-out';
+            textBox.style.opacity = 0;
+            nameBox.style.opacity = 0;
+            choicesContainer.style.opacity = 0;
+            controlsBar.style.opacity = 0;
+
+            dayTransitionOverlay.style.display = 'flex';
+            dayTransitionOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            dayTransitionOverlay.style.opacity = 1;
+            dayTransitionText.style.fontSize = '36px';
+            dayTransitionText.textContent = scene.text;
+            dayTransitionText.classList.remove('fade-out');
+            dayTransitionText.classList.add('fade-in');
+
+            // Remove any previous button if present
+            let continueBtn = document.getElementById('continue-to-day2-btn');
+            if (continueBtn) continueBtn.remove();
+
+            // Create Continue button
+            continueBtn = document.createElement('button');
+            continueBtn.id = 'continue-to-day2-btn';
+            continueBtn.textContent = 'Continue';
+            continueBtn.style.marginTop = '40px';
+            continueBtn.style.fontSize = '28px';
+            continueBtn.style.padding = '16px 48px';
+            continueBtn.style.border = '2px solid white';
+            continueBtn.style.background = 'rgba(0,0,0,0.7)';
+            continueBtn.style.color = 'white';
+            continueBtn.style.cursor = 'pointer';
+            continueBtn.style.zIndex = '1000';
+            continueBtn.style.boxShadow = '2px 2px 8px rgba(0,0,0,0.7)';
+
+            continueBtn.onclick = function() {
+                window.location.href = 'day2.html';
+            };
+
+            // Insert button below the report text
+            dayTransitionOverlay.appendChild(continueBtn);
+
+            // Remove click-to-dismiss logic
+            dayTransitionOverlay.onclick = null;
+            // Remove previous event listeners if any
+            dayTransitionText.classList.remove('fade-out');
+            // Button is now the only way to continue
+        }
+
+        gamePlayArea.addEventListener('click', (e) => {
+            const isClickingOnControls = e.target.closest('#controls-bar') || e.target.closest('#choices-container') || e.target.closest('#settings-button'); // New: Exclude settings button
+            if (isClickingOnControls || reportOverlay.style.display === 'flex' || settingsOverlay.style.display === 'flex') { // New: Exclude settings overlay
+                return;
+            }
+
+            if (isTyping) {
+                showFullText(scenes[currentSceneIndex].text);
+            } else if (scenes[currentSceneIndex] && scenes[currentSceneIndex].type === 'dialogue') {
+                nextDialogue();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (settingsOverlay.style.display === 'flex') { // New: Disable controls if settings are open
+                if (e.key === 'Escape') {
+                    toggleSettings();
+                }
+                return;
+            }
+
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                // --- MODIFICATION START ---
+                // Only show report if the current scene is a dialogue or choice
+                if (scenes[currentSceneIndex] && (scenes[currentSceneIndex].type === 'dialogue' || scenes[currentSceneIndex].type === 'choice')) {
+                    toggleReport();
+                }
+                // --- MODIFICATION END ---
+            } else if (e.key.toLowerCase() === 'x') {
+                e.preventDefault();
+                toggleControls();
+            } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+                if (reportOverlay.style.display === 'none') {
+                    if (isTyping) {
+                        showFullText(scenes[currentSceneIndex].text);
+                    } else if (scenes[currentSceneIndex] && scenes[currentSceneIndex].type === 'dialogue') {
+                        nextDialogue();
+                    }
+                }
+            } else if (e.key === 'Escape') { // New: Added escape to close settings
+                toggleSettings();
+            }
+        });
+
+        function toggleReport() {
+            reportOverlay.style.display = reportOverlay.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function endShift(decision) {
+            reportOverlay.style.display = 'none';
+            if (decision === 'yes') {
+                console.log("Shift ended. Proceeding to next day.");
+                showObservationReport({
+                    type: 'observation_report',
+                    day: currentDay,
+                    text: `[Day ${currentDay} observation: Manual shift end. Subject appears normal.]`,
+                    next: 'day_transition',
+                    day_target: currentDay + 1 // This value will be ignored since we're redirecting
+                });
+            } else {
+                console.log("Shift continues.");
+            }
+        }
+
+        function toggleControls() {
+            controlsHidden = !controlsHidden;
+            const elementsToHide = [textBox, nameBox, choicesContainer, controlsBar];
+            elementsToHide.forEach(el => {
+                el.style.opacity = controlsHidden ? '0' : '1';
+                el.style.pointerEvents = controlsHidden ? 'none' : 'auto';
+            });
+            // Toggle class on game-play-area to apply CSS for ux-ui-img
+            gamePlayArea.classList.toggle('controls-hidden', controlsHidden);
+        }
+
+        // New: Settings functions
+        function toggleSettings() {
+            settingsOverlay.style.display = settingsOverlay.style.display === 'flex' ? 'none' : 'flex';
+            if (settingsOverlay.style.display === 'flex') {
+                // When opening, ensure sliders reflect current volumes
+                masterVolumeSlider.value = masterVolume;
+                charVoiceSlider.value = charVoiceVolume;
+                // Temporarily disable game interaction while settings are open
+                gamePlayArea.style.pointerEvents = 'none';
+                reportOverlay.style.pointerEvents = 'none';
+            } else {
+                // Re-enable game interaction when closing settings
+                gamePlayArea.style.pointerEvents = 'auto';
+                reportOverlay.style.pointerEvents = 'auto';
+            }
+        }
+
+        function updateMasterVolume(value) {
+            masterVolume = parseFloat(value);
+            // Apply to all currently loaded audio elements
+            typeSound.volume = masterVolume;
+            choiceSound.volume = masterVolume;
+            writingSound.volume = masterVolume;
+            masterVolumeTestSound.volume = masterVolume; // New: Apply to test sound
+            bgm.volume = masterVolume;
+            // Play a quick sound to test volume change (optional)
+            playSound(masterVolumeTestSound);
+        }
+
+        function updateCharVoiceVolume(value) {
+            charVoiceVolume = parseFloat(value);
+            // For now, this slider does nothing. You would apply this to specific voice lines later.
+            console.log("Character Voice Volume set to:", charVoiceVolume);
+        }
+
+        initIntro();
+    // Start BGM
+    // BGM is now handled by index.html for continuous playback
+
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 2;
+            const y = (e.clientY / window.innerHeight - 0.5) * 2;
+
+            const bgParallaxAmount = 15;
+            const charParallaxAmount = 8;
+
+            if (backgroundImg.style.display !== 'none' && backgroundImg.src) {
+                backgroundImg.style.transform = `translate(${x * bgParallaxAmount}px, ${y * bgParallaxAmount}px)`;
+            }
+            if (charSprite.style.display !== 'none' && charSprite.src) {
+                charSprite.style.transform = `translateX(-50%) translate(${x * charParallaxAmount}px, ${y * charParallaxAmount}px)`;
+            }
+        });
+    </script>
+</body>
+</html>
