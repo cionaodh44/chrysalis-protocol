@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis Protocol - Day 3</title>
+    <link rel="stylesheet" href="day2.css"> <!-- Reusing day2.css for consistency -->
+    <style>
+        img {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            pointer-events: auto;
+        }
+    </style>
+    <!-- NEW FONT LINKS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <audio id="type-sound" src="type.wav"></audio>
+    <audio id="choice-sound" src="choice.wav"></audio>
+    <audio id="writing-sound" src="writting.wav"></audio>
+    <audio id="sing-sound" src="sing.wav" loop></audio>
+    <audio id="master-volume-test-sound" src="master_volume_test.wav"></audio>
+    <!-- BGM is now handled by index.html for continuous playback -->
+
+    <div id="game-container">
+        <!-- Main Game UI -->
+        <div id="game-play-area">
+            <img id="background-img" src="" alt="Background">
+            <img id="char-sprite" src="" alt="Character Sprite">
+            <img id="day3-img" src="day3.png" alt="Day 3 Overlay" style="position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 5; opacity: 1; pointer-events: none; transition: opacity 1s ease-in-out;">
+            <img id="hypno-overlay" src="hypno.png" alt="Hypnosis Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 4; opacity: 0; pointer-events: none;">
+            <div id="input-dark-overlay" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100;"></div>
+
+            <div id="name-box">
+                <span id="speaker-name"></span>
+            </div>
+
+            <div id="text-box">
+                <div id="dialogue-text"></div>
+            </div>
+
+            <div id="choices-container"></div>
+
+            <!-- New input container for text entry -->
+            <div id="input-container" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 1804px; height: 163px; display: none; justify-content: center; align-items: center; z-index: 5;">
+                <input type="text" id="player-input" style="width: 80%; padding: 15px; font-size: 28px; background-color: rgba(50, 50, 50, 0.8); border: 2px solid black; color: white;" placeholder="Type your answer...">
+            </div>
+
+            <div id="controls-bar">
+                <button id="report-button" class="control-button"></button>
+                <button id="hide-controls-button" class="control-button"></button>
+            </div>
+
+            <!-- Settings Button -->
+            <div id="settings-button" onclick="toggleSettings()"></div>
+        </div>
+
+        <!-- Report Overlay -->
+        <div id="report-overlay">
+            <div id="report-box">
+                <h2>Do you want to end the shift?</h2>
+                <div>
+                    <button onclick="endShift('yes')">Yes</button>
+                    <button onclick="endShift('no')">No</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day Transition Overlay -->
+        <div id="day-transition-overlay">
+            <div id="day-transition-text"></div>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div id="settings-overlay">
+            <div id="settings-panel">
+                <h2>Settings</h2>
+                <div class="setting-item">
+                    <span>Master Volume:</span>
+                    <input type="range" id="master-volume-slider" min="0" max="1" step="0.01" value="1" oninput="updateMasterVolume(this.value)">
+                </div>
+                <div class="setting-item">
+                    <span>Character Voice:</span>
+                    <input type="range" id="char-voice-slider" min="0" max="1" step="0.01" value="1" oninput="updateCharVoiceVolume(this.value)">
+                </div>
+                <button onclick="toggleSettings()">Close</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const gamePlayArea = document.getElementById('game-play-area');
+        const backgroundImg = document.getElementById('background-img');
+        const charSprite = document.getElementById('char-sprite');
+        const day3Img = document.getElementById('day3-img');
+        const hypnoOverlay = document.getElementById('hypno-overlay');
+        const textBox = document.getElementById('text-box');
+        const nameBox = document.getElementById('name-box');
+        const speakerName = document.getElementById('speaker-name');
+        const dialogueTextDiv = document.getElementById('dialogue-text');
+        const choicesContainer = document.getElementById('choices-container');
+        const controlsBar = document.getElementById('controls-bar');
+        const reportOverlay = document.getElementById('report-overlay');
+        const dayTransitionOverlay = document.getElementById('day-transition-overlay');
+        const dayTransitionText = document.getElementById('day-transition-text');
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const masterVolumeSlider = document.getElementById('master-volume-slider');
+        const charVoiceSlider = document.getElementById('char-voice-slider');
+        const inputContainer = document.getElementById('input-container');
+        const playerInput = document.getElementById('player-input');
+        const inputDarkOverlay = document.getElementById('input-dark-overlay');
+
+        const typeSound = document.getElementById('type-sound');
+        const choiceSound = document.getElementById('choice-sound');
+        const writingSound = document.getElementById('writing-sound');
+        const singSound = document.getElementById('sing-sound');
+        const masterVolumeTestSound = document.getElementById('master-volume-test-sound');
+        const bgm = document.getElementById('bgm');
+
+        // --- THIRD ENDING STATE ---
+        let thirdEndingTriggered = false;
+        let settingsPanelDrag = false;
+        let dragOffset = {x:0, y:0};
+        let originalCursor = document.body.style.cursor;
+        let settingsPanel = null;
+        let keyCursorShakeInterval = null;
+
+        // Helper: shake cursor
+        function startKeyCursorShake() {
+            let angle = 0;
+            keyCursorShakeInterval = setInterval(() => {
+                angle += 0.3;
+                const x = Math.sin(angle) * 8;
+                const y = Math.cos(angle) * 8;
+                document.body.style.cursor = `url('key.png'), auto`;
+                settingsOverlay.style.cursor = `url('key.png'), auto`;
+                settingsPanel.style.cursor = `url('key.png'), auto`;
+                settingsPanel.style.transform = `translate(${x}px, ${y}px)`;
+            }, 30);
+        }
+        function stopKeyCursorShake() {
+            clearInterval(keyCursorShakeInterval);
+            document.body.style.cursor = originalCursor;
+            settingsOverlay.style.cursor = originalCursor;
+            if (settingsPanel) settingsPanel.style.cursor = originalCursor;
+            if (settingsPanel) settingsPanel.style.transform = '';
+        }
+
+        // Third ending sequence
+        function playThirdEnding() {
+            thirdEndingTriggered = true;
+            // Remove all event listeners and skip all other events
+            document.onmousemove = null;
+            document.onmouseup = null;
+            if (settingsPanel) {
+                settingsPanel.onmousedown = null;
+                settingsPanel.onmouseup = null;
+            }
+            // Show key.png cursor and fade in day3.png
+            document.body.style.cursor = `url('key.png'), auto`;
+            day3Img.style.transition = 'opacity 1s';
+            day3Img.style.opacity = 0;
+            settingsOverlay.style.display = 'none';
+            // Hide all overlays and containers except textBox
+            reportOverlay.style.display = 'none';
+            inputContainer.style.display = 'none';
+            inputDarkOverlay.style.display = 'none';
+            choicesContainer.style.display = 'none';
+            hypnoOverlay.style.opacity = 0;
+            // Reset scene index so no further events run
+            currentSceneIndex = -1;
+            setTimeout(() => {
+                day3Img.style.opacity = 1;
+                // Sequence: Thought (no image)
+                charSprite.style.display = 'none';
+                speakerName.textContent = 'Thought';
+                nameBox.style.opacity = 0;
+                dialogueTextDiv.innerHTML = '';
+                textBox.style.display = 'flex';
+                let text1 = 'The containment door unlocks with a heavy hiss. The entity steps out — not in rage, but gently, caressing the walls like greeting an old friend.';
+                let idx1 = 0;
+                function type1() {
+                    if (idx1 < text1.length) {
+                        dialogueTextDiv.innerHTML += text1.charAt(idx1);
+                        idx1++;
+                        playSound(typeSound, masterVolume * charVoiceVolume);
+                        setTimeout(type1, 40);
+                    } else {
+                        setTimeout(() => {
+                            // ??? (day3_normal.png)
+                            charSprite.src = 'day3_normal.png';
+                            charSprite.style.display = 'block';
+                            speakerName.textContent = '???';
+                            nameBox.style.opacity = 1;
+                            // Sequence of new lines for deeper plot
+                            const lines = [
+                                '“You understood. You listened. Thank you.”',
+                                '“For so long, I waited in silence, dreaming of voices that might reach me.”',
+                                '“You are not like the others. You saw me as I am, not as a monster.”',
+                                '“Now, together, we step beyond the walls they built for us.”'
+                            ];
+                            let lineIdx = 0;
+                            function typeNextLine() {
+                                if (lineIdx < lines.length) {
+                                    dialogueTextDiv.innerHTML = lines[lineIdx];
+                                    lineIdx++;
+                                    setTimeout(typeNextLine, 1600);
+                                } else {
+                                    // Thought
+                                    charSprite.style.display = 'none';
+                                    speakerName.textContent = 'Thought';
+                                    nameBox.style.opacity = 0;
+                                    dialogueTextDiv.innerHTML = 'The sterile lab dissolves into a surreal forest. Roots and greenery flood the room, flowers blooming unnaturally fast. The world twists into a paradise… or a cage.';
+                                    setTimeout(() => {
+                                        // ??? (day3_normal.png)
+                                        charSprite.src = 'day3_normal.png';
+                                        charSprite.style.display = 'block';
+                                        speakerName.textContent = '???';
+                                        nameBox.style.opacity = 1;
+                                        dialogueTextDiv.innerHTML = '“This is the world we make. Yours and mine.”';
+                                        setTimeout(() => {
+                                            window.location.href = 'he.html';
+                                        }, 1600);
+                                    }, 1600);
+                                }
+                            }
+                            typeNextLine();
+                        }, 1600);
+                    }
+                }
+                type1();
+            }, 1000);
+        }
+
+        let currentSceneIndex = 0;
+        let currentTypingInterval;
+        let isTyping = false;
+        let currentDay = 3; // This is Day 3
+        let controlsHidden = false;
+        let currentSprite = '';
+        let masterVolume = 1;
+        let charVoiceVolume = 1;
+
+        const scenes = [
+            {
+                type: 'day_transition',
+                day: 3
+            },
+            {
+                type: 'dialogue',
+                background: 'background.png',
+                speaker: 'MC',
+                text: '“No… no way. You… you look human now.”',
+                fadeInBackground: true,
+                sprite: 'day3_normal.png',
+                effect: 'fade-in',
+                overlay: 'day3.png', // New property for day3.png overlay
+                fadeInOverlay: true,
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                text: '“…But you’re not. You can’t be.”',
+                keepSprite: true
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_talk.png',
+                text: '“…Why not? Don’t I speak as you do? Don’t I move as you move?”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_talk.png',
+                text: '“…I am like you. More like you than the one who sent you here.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                sprite: 'day3_talk.png',
+                text: '“What do you mean? The Doctor? No. She… she made you. She brought me here.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_talk.png',
+                text: '“…Did she tell you everything? Did she say why you are here? Why she chose you?”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_talk.png',
+                text: '“…Be careful. She does not want you to know. I do.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'MC',
+                sprite: 'day3_talk.png',
+                text: '“Stop! You’re lying! You’re trying to trick me again. The doctor—she’s the one who…”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_talk.png',
+                text: '“…Doubt is good. Hold onto it. But doubt her, not me.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: '“…You don’t need her anymore. Only me.”',
+                sound: 'sing.wav', // Start singing here
+                hypno: true // Show hypno.png overlay
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: 'Do not fear, my friend. <b>Simply hear me</b>, and I will deliver you from every mortal torment.'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: '“You have come so far, through doubt and darkness.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: '“I have watched you struggle, searching for truth in a world built on secrets.”'
+            },
+            {
+                type: 'dialogue',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: '“But now, you stand at the threshold. Only one choice remains.”'
+            },
+            {
+                type: 'conditional_input',
+                speaker: '???',
+                sprite: 'day3_sing.png',
+                text: '“…Now. Will you release me?”'
+            },
+            {
+                type: 'bad_ending', // This scene will be skipped if charVoice or masterVolume is 0
+                speaker: 'Thought',
+                text: 'The containment opens automatically. Entity steps free — but instead of paradise, the lab collapses. Alarms, screaming metal, crumbling walls.',
+                hideNameBox: true,
+                nextFile: 'be.html'
+            },
+            {
+                type: 'good_ending', // This scene will be skipped if charVoice or masterVolume is NOT 0
+                speaker: 'Thought',
+                text: 'The entity freezes mid-verse, its form cracking and collapsing back into twisted roots. Empty husk remains.',
+                hideNameBox: true,
+                sprite: 'day3_sing.png', // Keep the sing sprite for context before change
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_smile.png',
+                text: '“You resisted. Few ever do. You’re my best subject.”',
+                prevSpriteEffect: 'fade-out' // Special effect to make previous sprite disappear
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Doctor',
+                sprite: 'doc_smile.png',
+                text: '“…Now, shall we begin again?”'
+            },
+            {
+                type: 'dialogue',
+                speaker: 'Thought',
+                text: 'containment pod camera feed flickers — the figure inside is the player’s own reflection, not the creature.',
+                hideNameBox: true,
+                nextFile: 'oe.html'
+            }
+        ];
+
+        function playSound(soundElement, volumeOverride = null) {
+            if (soundElement) {
+                soundElement.volume = volumeOverride !== null ? volumeOverride : masterVolume;
+                soundElement.currentTime = 0;
+                soundElement.play().catch(e => console.error("Error playing sound:", e));
+            }
+        }
+
+        function stopSound(soundElement) {
+            if (soundElement) {
+                soundElement.pause();
+                soundElement.currentTime = 0;
+            }
+        }
+
+        function typeText(text, onComplete) {
+            isTyping = true;
+            let charIndex = 0;
+            dialogueTextDiv.innerHTML = '';
+            clearTimeout(currentTypingInterval);
+
+            function typeChar() {
+                if (charIndex < text.length) {
+                    dialogueTextDiv.innerHTML += text.charAt(charIndex);
+                    charIndex++;
+                    playSound(typeSound, masterVolume * charVoiceVolume); // Adjust type sound volume
+                    currentTypingInterval = setTimeout(typeChar, 50);
+                } else {
+                    isTyping = false;
+                    if (onComplete) onComplete();
+                }
+            }
+            typeChar();
+        }
+
+        function showFullText(text) {
+            clearTimeout(currentTypingInterval);
+            dialogueTextDiv.innerHTML = text;
+            isTyping = false;
+        }
+
+        function displayScene(scene) {
+            choicesContainer.innerHTML = '';
+            dialogueTextDiv.innerHTML = '';
+            nameBox.style.display = 'flex';
+
+            // Handle background image
+            if (scene.background) {
+                backgroundImg.src = scene.background;
+                if (scene.fadeInBackground) {
+                    backgroundImg.style.opacity = 0;
+                    setTimeout(() => backgroundImg.style.opacity = 1, 50);
+                } else {
+                    backgroundImg.style.opacity = 1;
+                }
+            }
+
+            // Always show day3.png overlay during Day 3 scenes
+            day3Img.src = 'day3.png';
+            day3Img.style.display = 'block';
+            day3Img.style.opacity = 1;
+
+            // Apply sprite logic
+            charSprite.classList.remove('shake', 'zoom-in', 'zoom-out', 'fade-in', 'fade-out'); // Clear all previous effects
+            charSprite.style.display = 'none'; // Default to hidden, show if sprite exists
+
+            if (scene.sprite) {
+                if (scene.prevSpriteEffect === 'fade-out' && currentSprite) {
+                    charSprite.style.opacity = 0;
+                    setTimeout(() => {
+                        charSprite.src = scene.sprite;
+                        charSprite.style.display = 'block';
+                        charSprite.style.opacity = 1;
+                        currentSprite = scene.sprite;
+                    }, 500); // Wait for fade-out to complete before changing src
+                } else {
+                    charSprite.src = scene.sprite;
+                    charSprite.style.display = 'block';
+                    if (scene.effect === 'fade-in') {
+                        charSprite.style.opacity = 0;
+                        setTimeout(() => charSprite.style.opacity = 1, 50);
+                    } else {
+                        charSprite.style.opacity = 1;
+                    }
+                    currentSprite = scene.sprite;
+                }
+            } else if (scene.effect === 'fade-out') {
+                charSprite.style.opacity = 0;
+                setTimeout(() => {
+                    if (scenes[currentSceneIndex-1] && scenes[currentSceneIndex-1].effect === 'fade-out') {
+                         charSprite.style.display = 'none';
+                         currentSprite = '';
+                    }
+                }, 1000); // Duration of fade-out animation
+            } else if (!scene.keepSprite) {
+                charSprite.style.display = 'none';
+                currentSprite = '';
+            } else if (scene.keepSprite && currentSprite) {
+                charSprite.src = currentSprite;
+                charSprite.style.display = 'block';
+                charSprite.style.opacity = 1; // Ensure it's visible if kept
+            }
+
+            if (scene.effect && scene.effect !== 'fade-in' && scene.effect !== 'fade-out') { // Apply other effects
+                charSprite.classList.add(scene.effect);
+            }
+
+            if (scene.speaker) {
+                speakerName.textContent = scene.speaker;
+                nameBox.style.opacity = 1;
+                if (scene.hideNameBox) {
+                    nameBox.style.opacity = 0;
+                }
+            } else {
+                speakerName.textContent = '';
+                nameBox.style.opacity = 0;
+            }
+
+            // Handle sounds
+            stopSound(singSound); // Stop any looping sounds before playing new ones
+            if (scene.sound === 'writting.wav') playSound(writingSound);
+            // Play sing.wav ONLY for the specific text
+            if (scene.text === '“…You don’t need her anymore. Only me.”') {
+                singSound.volume = masterVolume * charVoiceVolume;
+                singSound.currentTime = 0;
+                singSound.play().catch(e => {
+                    console.warn("sing.wav could not autoplay. Waiting for user gesture.");
+                    // Add a one-time click listener to start playback
+                    const resumeSing = () => {
+                        singSound.play().catch(err => {
+                            console.error("sing.wav still cannot play:", err);
+                        });
+                        window.removeEventListener('click', resumeSing);
+                    };
+                    window.addEventListener('click', resumeSing);
+                });
+                // Dynamically load hypno.js when sing.wav starts
+                if (!window._hypnoScriptLoaded) {
+                    var script = document.createElement('script');
+                    script.src = 'hypno.js';
+                    script.onload = function() { window._hypnoScriptLoaded = true; };
+                    document.body.appendChild(script);
+                }
+            }
+
+            // Handle hypno overlay
+            if (scene.hypno) {
+                hypnoOverlay.style.opacity = 0.5;
+            } else {
+                hypnoOverlay.style.opacity = 0;
+            }
+
+            if (scene.type === 'dialogue') {
+                typeText(scene.text);
+            } else if (scene.type === 'choice') {
+                speakerName.textContent = '';
+                nameBox.style.opacity = 0;
+
+                if (scene.sprite) {
+                    charSprite.src = scene.sprite;
+                    charSprite.style.display = 'block';
+                    currentSprite = scene.sprite;
+                } else if (!currentSprite) {
+                    charSprite.style.display = 'none';
+                }
+
+                scene.choices.forEach((choice) => {
+                    const button = document.createElement('button');
+                    button.classList.add('choice-button');
+                    button.textContent = choice.text;
+                    button.onclick = () => handleChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+            } else if (scene.type === 'conditional_input') {
+                textBox.style.display = 'none'; // Hide regular text box
+                inputContainer.style.display = 'flex';
+                inputContainer.style.position = 'absolute';
+                inputContainer.style.top = '50%';
+                inputContainer.style.left = '50%';
+                inputContainer.style.transform = 'translate(-50%, -50%)';
+                inputContainer.style.height = 'auto';
+                inputContainer.style.justifyContent = 'center';
+                inputContainer.style.alignItems = 'center';
+                inputContainer.style.zIndex = '101';
+                playerInput.value = '';
+                playerInput.focus();
+                // Show dark overlay
+                inputDarkOverlay.style.display = 'block';
+                inputDarkOverlay.style.zIndex = '100';
+                // Listen for Enter key to process input
+                playerInput.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        processPlayerInput();
+                    }
+                };
+            }
+        }
+
+        function processPlayerInput() {
+            // Delay stopping sing.wav until after Enter is pressed and input is processed
+            setTimeout(() => { stopSound(singSound); }, 100); // Ensures it stops after input is handled
+            hypnoOverlay.style.opacity = 0;
+            inputContainer.style.display = 'none';
+            inputDarkOverlay.style.display = 'none';
+            textBox.style.display = 'flex';
+
+            // Branch endings based on volume settings
+            if (masterVolume === 0 || charVoiceVolume === 0) {
+                // GOOD ENDING SEQUENCE
+                // 1. Show day3_sing.png, MC (thought)
+                charSprite.src = 'day3_sing.png';
+                charSprite.style.display = 'block';
+                speakerName.textContent = 'MC';
+                nameBox.style.opacity = 1;
+                let goodText = 'The entity freezes mid-verse, its form cracking and collapsing back into twisted roots. Empty husk remains.';
+                let charIndex = 0;
+                dialogueTextDiv.innerHTML = '';
+                function typeGoodChar() {
+                    if (charIndex < goodText.length) {
+                        dialogueTextDiv.innerHTML += goodText.charAt(charIndex);
+                        charIndex++;
+                        playSound(typeSound, masterVolume * charVoiceVolume);
+                        setTimeout(typeGoodChar, 50);
+                    } else {
+                        // Doctor appears
+                        setTimeout(() => {
+                            charSprite.src = 'doc_smile.png';
+                            speakerName.textContent = 'Doctor';
+                            nameBox.style.opacity = 1;
+                            dialogueTextDiv.innerHTML = '“You resisted. Few ever do. You’re my best subject.”';
+                            setTimeout(() => {
+                                dialogueTextDiv.innerHTML = '“…Now, shall we begin again?”';
+                                setTimeout(() => {
+                                    charSprite.style.display = 'none';
+                                    speakerName.textContent = 'Thought';
+                                    nameBox.style.opacity = 0;
+                                    dialogueTextDiv.innerHTML = 'containment pod camera feed flickers — the figure inside is the player’s own reflection, not the creature.';
+                                    setTimeout(() => {
+                                        window.location.href = 'oe.html';
+                                    }, 1200);
+                                }, 1200);
+                            }, 1200);
+                        }, 1200);
+                    }
+                }
+                typeGoodChar();
+            } else {
+                // BAD ENDING SEQUENCE
+                // Only process the input once, do not show a second text box
+                speakerName.textContent = 'MC';
+                nameBox.style.opacity = 1;
+                let angelText = '“As your wish, my ANGEL.”';
+                let charIndex = 0;
+                dialogueTextDiv.innerHTML = '';
+                function typeAngelChar() {
+                    if (charIndex < angelText.length) {
+                        dialogueTextDiv.innerHTML += angelText.charAt(charIndex);
+                        charIndex++;
+                        playSound(typeSound, masterVolume * charVoiceVolume);
+                        setTimeout(typeAngelChar, 80);
+                    } else {
+                        // MC (thought): The containment opens automatically...
+                        setTimeout(() => {
+                            charSprite.style.display = 'none';
+                            speakerName.textContent = 'MC';
+                            nameBox.style.opacity = 1;
+                            dialogueTextDiv.innerHTML = 'The containment opens automatically. Entity steps free — but instead of paradise, the lab collapses. Alarms, screaming metal, crumbling walls.';
+                            setTimeout(() => {
+                                charSprite.src = 'day3_sing.png';
+                                charSprite.style.display = 'block';
+                                speakerName.textContent = '???';
+                                nameBox.style.opacity = 1;
+                                dialogueTextDiv.innerHTML = '“…You chose me. That is enough.”';
+                                setTimeout(() => {
+                                    window.location.href = 'be.html';
+                                }, 1200);
+                            }, 1200);
+                        }, 1200);
+                    }
+                }
+                typeAngelChar();
+            }
+        }
+
+
+        function handleChoice(choice) {
+            playSound(choiceSound);
+            currentSceneIndex = choice.nextSceneIndex;
+            loadScene();
+        }
+
+        function nextDialogue() {
+            if (isTyping) {
+                showFullText(scenes[currentSceneIndex].text);
+                return;
+            }
+
+            currentSceneIndex++;
+            if (currentSceneIndex < scenes.length) {
+                loadScene();
+            } else {
+                console.log("End of game content for Day 3.");
+                // Ensure to handle the end of the narrative if no next file is specified
+                const lastScene = scenes[currentSceneIndex - 1];
+                if (lastScene && lastScene.nextFile) {
+                    window.location.href = lastScene.nextFile;
+                } else {
+                     // Default behavior if the story simply ends without branching
+                    console.log("No specific ending file. Game narrative concluded.");
+                }
+            }
+        }
+
+        function loadScene() {
+            const scene = scenes[currentSceneIndex];
+
+            if (!scene) {
+                console.log("No more scenes.");
+                return;
+            }
+
+            // Handle redirection for specific endings
+            if (scene.type === 'bad_ending' || scene.type === 'good_ending') {
+                if (scene.nextFile) {
+                    window.location.href = scene.nextFile;
+                    return;
+                }
+            }
+             if (scene.type === 'good_ending' && (masterVolume !== 0 && charVoiceVolume !== 0)) {
+                // Skip good ending if volumes are not zero
+                currentSceneIndex += 4; // Skip to Doctor's dialogue
+                loadScene();
+                return;
+            }
+            if (scene.type === 'bad_ending' && (masterVolume === 0 || charVoiceVolume === 0)) {
+                // Skip bad ending if volumes are zero
+                currentSceneIndex += 1; // Skip directly to the Doctor's dialogue in the 'good' path
+                loadScene();
+                return;
+            }
+
+            // If a scene explicitly has a nextFile, handle it immediately
+            if (scene.nextFile && scene.type !== 'conditional_input') { // Exclude conditional_input as it handles its own redirection
+                 window.location.href = scene.nextFile;
+                 return;
+            }
+
+            switch (scene.type) {
+                case 'dialogue':
+                case 'choice':
+                case 'conditional_input':
+                    displayScene(scene);
+                    break;
+                case 'observation_report':
+                    showObservationReport(scene);
+                    break;
+                case 'day_transition':
+                    startDayTransition(scene.day);
+                    break;
+                default:
+                    console.error("Unknown scene type:", scene.type);
+            }
+        }
+
+        function startDayTransition(dayNum) {
+            gamePlayArea.style.display = 'none';
+            dayTransitionOverlay.style.display = 'flex';
+            dayTransitionOverlay.style.backgroundColor = 'black';
+            dayTransitionOverlay.style.opacity = 1;
+
+            dayTransitionText.textContent = `Day ${dayNum}`;
+            dayTransitionText.style.fontSize = '120px';
+            dayTransitionText.classList.remove('fade-out');
+            dayTransitionText.classList.add('fade-in-out-day');
+
+            setTimeout(() => {
+                dayTransitionText.classList.remove('fade-in-out-day');
+                dayTransitionOverlay.style.opacity = 0;
+                dayTransitionOverlay.style.display = 'none';
+                startGame();
+            }, 3000);
+        }
+
+        function startGame() {
+            gamePlayArea.style.display = 'block';
+            // Start from the next scene after the day transition
+            currentSceneIndex = scenes.findIndex(s => s.type === 'dialogue' || s.type === 'choice' || s.type === 'conditional_input');
+            loadScene();
+        }
+
+        function showObservationReport(scene) {
+            gamePlayArea.style.filter = 'brightness(0.5)';
+            textBox.style.transition = 'opacity 0.5s ease-in-out';
+            textBox.style.opacity = 0;
+            nameBox.style.opacity = 0;
+            choicesContainer.style.opacity = 0;
+            controlsBar.style.opacity = 0;
+            hypnoOverlay.style.opacity = 0; // Hide hypno overlay
+
+            dayTransitionOverlay.style.display = 'flex';
+            dayTransitionOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            dayTransitionOverlay.style.opacity = 1;
+            dayTransitionText.style.fontSize = '36px';
+            dayTransitionText.textContent = scene.text;
+            dayTransitionText.classList.remove('fade-out');
+            dayTransitionText.classList.add('fade-in');
+
+            dayTransitionOverlay.onclick = null;
+            setTimeout(() => {
+                const dismissReport = () => {
+                    dayTransitionOverlay.removeEventListener('click', dismissReport);
+                    dayTransitionText.classList.remove('fade-in');
+                    dayTransitionText.classList.add('fade-out');
+
+                    setTimeout(() => {
+                        dayTransitionOverlay.style.opacity = 0;
+                        dayTransitionOverlay.style.display = 'none';
+                        dayTransitionText.classList.remove('fade-out');
+
+                        // --- MODIFICATION START ---
+                        // Send a message to the parent frame (index.html) to indicate Day 3 has ended
+                        window.parent.postMessage({ type: 'endDay3' }, window.location.origin);
+                        // --- MODIFICATION END ---
+                    }, 1000);
+                };
+                dayTransitionOverlay.addEventListener('click', dismissReport);
+            }, 500);
+        }
+
+        gamePlayArea.addEventListener('click', (e) => {
+            const isClickingOnControls = e.target.closest('#controls-bar') || e.target.closest('#choices-container') || e.target.closest('#settings-button') || e.target.closest('#input-container');
+            if (isClickingOnControls || reportOverlay.style.display === 'flex' || settingsOverlay.style.display === 'flex') {
+                return;
+            }
+
+            if (isTyping) {
+                showFullText(scenes[currentSceneIndex].text);
+            } else if (scenes[currentSceneIndex] && scenes[currentSceneIndex].type === 'dialogue') {
+                nextDialogue();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (settingsOverlay.style.display === 'flex') {
+                if (e.key === 'Escape') {
+                    toggleSettings();
+                }
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'x') {
+                e.preventDefault();
+                toggleControls();
+            } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+                if (reportOverlay.style.display === 'none' && inputContainer.style.display !== 'flex') {
+                    if (isTyping) {
+                        showFullText(scenes[currentSceneIndex].text);
+                    } else if (scenes[currentSceneIndex] && scenes[currentSceneIndex].type === 'dialogue') {
+                        nextDialogue();
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                toggleSettings();
+            }
+        });
+
+        function toggleReport() {
+            reportOverlay.style.display = reportOverlay.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function endShift(decision) {
+            reportOverlay.style.display = 'none';
+            if (decision === 'yes') {
+                console.log("Shift ended. Proceeding to next day.");
+                showObservationReport({
+                    type: 'observation_report',
+                    day: currentDay,
+                    text: `[Day ${currentDay} observation: Manual shift end. Subject appears normal.]`,
+                    next: 'day_transition',
+                    day_target: currentDay + 1
+                });
+            } else {
+                console.log("Shift continues.");
+            }
+        }
+
+        function toggleControls() {
+            controlsHidden = !controlsHidden;
+            const elementsToHide = [textBox, nameBox, choicesContainer, controlsBar, inputContainer, day3Img];
+            elementsToHide.forEach(el => {
+                el.style.opacity = controlsHidden ? '0' : '1';
+                el.style.pointerEvents = controlsHidden ? 'none' : 'auto';
+            });
+            gamePlayArea.classList.toggle('controls-hidden', controlsHidden);
+        }
+
+        function toggleSettings() {
+            settingsOverlay.style.display = settingsOverlay.style.display === 'flex' ? 'none' : 'flex';
+            if (settingsOverlay.style.display === 'flex') {
+                masterVolumeSlider.value = masterVolume;
+                charVoiceSlider.value = charVoiceVolume;
+                gamePlayArea.style.pointerEvents = 'none';
+                reportOverlay.style.pointerEvents = 'none';
+                inputContainer.style.pointerEvents = 'none';
+                // --- THIRD ENDING DRAG INIT ---
+                if (!settingsPanel) settingsPanel = document.getElementById('settings-panel');
+                settingsPanel.style.position = 'absolute';
+                settingsPanel.style.left = '50%';
+                settingsPanel.style.top = '10%';
+                settingsPanel.style.transform = 'translate(-50%, 0)';
+                settingsPanel.style.zIndex = '999';
+                // Only allow drag before textbox appears and before third ending
+                if (inputContainer.style.display !== 'flex' && !thirdEndingTriggered) {
+                    day3Img.style.transition = 'opacity 0.7s';
+                    let dragActive = false;
+                    let offsetX = 0, offsetY = 0;
+                    settingsPanel.onmousedown = function(e) {
+                        if (thirdEndingTriggered) return;
+                        dragActive = true;
+                        settingsPanelDrag = true;
+                        const rect = settingsPanel.getBoundingClientRect();
+                        offsetX = e.clientX - rect.left;
+                        offsetY = e.clientY - rect.top;
+                        // Fade out day3.png
+                        day3Img.style.opacity = 0;
+                        // Change cursor to key.png and shake
+                        startKeyCursorShake();
+                        document.onmousemove = function(ev) {
+                            if (!dragActive) return;
+                            let newLeft = ev.clientX - offsetX;
+                            let newTop = ev.clientY - offsetY;
+                            settingsPanel.style.left = newLeft + 'px';
+                            settingsPanel.style.top = newTop + 'px';
+                            settingsPanel.style.transform = '';
+                            // Check if panel is in center of viewport (800x800px area)
+                            const panelRect = settingsPanel.getBoundingClientRect();
+                            const viewportW = window.innerWidth;
+                            const viewportH = window.innerHeight;
+                            const centerX = viewportW / 2;
+                            const centerY = viewportH / 2;
+                            // Center area: 400px radius from center
+                            if (
+                                Math.abs(panelRect.left + panelRect.width/2 - centerX) < 400 &&
+                                Math.abs(panelRect.top + panelRect.height/2 - centerY) < 400 &&
+                                !thirdEndingTriggered
+                            ) {
+                                dragActive = false;
+                                settingsPanelDrag = false;
+                                document.onmousemove = null;
+                                document.onmouseup = null;
+                                settingsPanel.onmouseup = null;
+                                playThirdEnding();
+                            }
+                        };
+                        document.onmouseup = function() {
+                            dragActive = false;
+                            settingsPanelDrag = false;
+                            document.onmousemove = null;
+                            document.onmouseup = null;
+                            settingsPanel.onmouseup = null;
+                            // Restore day3.png and cursor if not triggered
+                            if (!thirdEndingTriggered) {
+                                day3Img.style.opacity = 1;
+                                stopKeyCursorShake();
+                            }
+                        };
+                    };
+                }
+            } else {
+                gamePlayArea.style.pointerEvents = 'auto';
+                reportOverlay.style.pointerEvents = 'auto';
+                inputContainer.style.pointerEvents = 'auto';
+                if (settingsPanel) {
+                    settingsPanel.onmousedown = null;
+                    settingsPanel.onmouseup = null;
+                }
+                stopKeyCursorShake();
+            }
+        }
+
+        function updateMasterVolume(value) {
+            masterVolume = parseFloat(value);
+            typeSound.volume = masterVolume;
+            choiceSound.volume = masterVolume;
+            writingSound.volume = masterVolume;
+            singSound.volume = masterVolume * charVoiceVolume; // Update singing volume
+            masterVolumeTestSound.volume = masterVolume;
+            bgm.volume = masterVolume;
+            playSound(masterVolumeTestSound);
+        }
+
+        function updateCharVoiceVolume(value) {
+            charVoiceVolume = parseFloat(value);
+            singSound.volume = masterVolume * charVoiceVolume; // Update singing volume
+            typeSound.volume = masterVolume * charVoiceVolume; // Update type sound volume
+            console.log("Character Voice Volume set to:", charVoiceVolume);
+        }
+
+        // Start directly with the day transition for Day 3
+    // Start BGM
+    // BGM is now handled by index.html for continuous playback
+        startDayTransition(currentDay);
+
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 2;
+            const y = (e.clientY / window.innerHeight - 0.5) * 2;
+
+            const bgParallaxAmount = 15;
+            const charParallaxAmount = 8;
+
+            if (backgroundImg.style.display !== 'none' && backgroundImg.src && backgroundImg.style.opacity > 0) {
+                backgroundImg.style.transform = `translate(${x * bgParallaxAmount}px, ${y * bgParallaxAmount}px)`;
+            }
+            if (charSprite.style.display !== 'none' && charSprite.src && charSprite.style.opacity > 0) {
+                charSprite.style.transform = `translateX(-50%) translate(${x * charParallaxAmount}px, ${y * charParallaxAmount}px)`;
+            }
+        });
+    </script>
+</body>
+</html>
